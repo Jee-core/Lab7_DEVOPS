@@ -1,0 +1,220 @@
+                                          Host Your CV on AWS
+1. What you do
+You have a CV template. In this assessment you put it on the Internet twice. Once it is served by a web server on an EC2 instance, and once by a Lambda function. Both have a public address that anybody can open.
+The files of the CV are kept in one S3 bucket, and that bucket is private. The only things allowed to read it are an IAM role for the instance and another IAM role for the function, and you write the policies for both. A visitor who tries to open the file in the bucket directly must be refused.
+You work alone, in your own AWS account, on your own CV. To mark it, we open both addresses from outside, try to read your bucket directly, run your evidence script, and read your policies and your README.
+A sensible order is: the bucket, the two roles, the EC2 path, the Lambda path, the evidence script, the README.
+2. Names and Region
+Take your roll number in lower case, for example 22L-6543 becomes 22l-6543, and use it in every name below. Use the Region we use in class for everything.
+Resource
+Name
+S3 bucket
+cv-22l-6543 (add a few digits at the end if the name is taken)
+EC2 instance
+cv-ec2-22l-6543
+EC2 role
+cv-ec2-role-22l-6543
+Lambda function
+cv-func-22l-6543
+Lambda role
+cv-lambda-role-22l-6543
+Give the bucket, the instance, the function and both roles two tags: Owner with your roll number as the value, and Course with the value cloud.
+3. The files in S3
+The bucket has three objects, all under the prefix site/ and nothing else.
+Key
+What it is
+site/index.html
+Your CV page, at most 100 KB
+site/style.css
+Its stylesheet
+site/cv.pdf
+A PDF copy of your CV, at most 1 MB
+The page must show your full name, your roll number, your email address, and three sections called Education, Skills and Projects (with at least one project). It links to /style.css, and it has a link to /cv.pdf for downloading. The last line of the page is a footer that reads exactly:
+Hosted on: {{HOSTED_ON}}
+Leave the placeholder as it is in S3. Each of your two servers replaces it when it serves the page: the EC2 side with the word EC2 and the instance ID, and the Lambda side with the word Lambda and the function name.
+The bucket settings:
+All four Block Public Access settings are on.
+Versioning is enabled.
+There is no bucket policy and no ACL that gives anything to everyone.
+4. IAM
+You write two roles. Keep the JSON of each trust policy and each permission policy in the iam folder of your repository.
+The EC2 role is trusted by the EC2 service. Its permissions are exactly these two things and nothing more: s3:GetObject on the objects under site/ in your bucket, and s3:ListBucket on your bucket, only when the prefix is site/. The second one is what lets a sync command work.
+The Lambda role is trusted by the Lambda service. It has the AWS managed policy for basic logging, and one inline policy with s3:GetObject on the objects under site/ in your bucket. It has no ListBucket.
+In both roles, no action may be a wildcard and no resource may be a wildcard. The managed logging policy is the only exception.
+There are no access keys anywhere. Not in the user data, not in the function code or its environment, not in the repository, and not on the instance.
+From a shell on the instance (EC2 Instance Connect is fine), try to delete or overwrite one of the objects with the AWS CLI. It must fail with an access denied message. Paste that output into your README.
+5. Path A: EC2
+One instance running Amazon Linux 2023, of a type that is free-tier eligible (t2.micro or t3.micro). It has the normal public IPv4 address that comes with it. Do not use an Elastic IP.
+The EC2 role is attached to it, and the metadata service is set to require IMDSv2.
+The security group allows TCP 80 from anywhere. It allows TCP 22 only from one address of your own (a /32), or has no rule for 22 at all. It has no other inbound rules.
+The user data is kept in ec2/user-data.sh. It installs and starts a web server and then runs your sync script once.
+ec2/sync-cv.sh copies the site/ prefix of the bucket into the web root. After that it replaces the placeholder with EC2 followed by the instance ID, which it reads from the metadata service, and it adds one line to /var/log/cv-sync.log with the time and whether the sync worked.
+The sync script runs again on a schedule, at least every 5 minutes. Amazon Linux 2023 has no cron by default, so either use a systemd timer or install cronie. If you change a file in S3, the site changes within 5 minutes without anyone logging in to the instance.
+The site serves /, /style.css and /cv.pdf, each with the right content type. Plain HTTP is enough. HTTPS is not required.
+6. Path B: Lambda
+Runtime Python or Node.js, the latest one offered. Memory between 128 and 256 MB, and a timeout of 10 seconds.
+The bucket name and the prefix come from two environment variables called BUCKET and PREFIX. They do not appear in the code.
+It uses the Lambda role from section 4.
+It has a public function URL with the authentication type NONE. The console adds the permission that lets anyone call it. Find that permission in the Permissions tab of the function and be ready to explain it.
+What it returns depends on the path in the request.
+Path
+Response
+/ and /index.html
+The page with the placeholder replaced by Lambda and the function name. Content type text/html, and Cache-Control with max-age of 60
+/style.css
+The stylesheet, with content type text/css
+/cv.pdf
+The PDF, with content type application/pdf. It is binary, so it has to be sent base64 encoded with the matching flag set
+Anything else
+Status 404 and a short HTML page. Not an error, and not 200
+Every request writes one line of JSON to the log with the fields fn, path, status and ms. The retention of the function's log group is set to 7 days.
+The code is kept in the lambda folder of the repository.
+7. The evidence script
+Write a Bash script called collect-evidence.sh in the top folder of the repository. It takes three arguments: the bucket name, the EC2 address and the Lambda address. If it does not get exactly three, it prints a usage line and exits with 1. It writes everything to evidence.txt, and it prints DONE when it finishes.
+Each section of the file starts with a line of the form == name ==. The sections are these.
+Section name
+What it shows
+A command that can do it
+caller
+Your account ID
+aws sts get-caller-identity
+public-access
+The four Block Public Access settings
+aws s3api get-public-access-block
+versioning
+That versioning is enabled
+aws s3api get-bucket-versioning
+objects
+The keys under site/ and their sizes
+aws s3 ls
+ec2-policy
+The permission policy of the EC2 role
+aws iam get-role-policy
+lambda-policy
+The managed policies and the inline policy of the Lambda role
+aws iam list-attached-role-policies and get-role-policy
+security-group
+The inbound rules
+aws ec2 describe-security-groups
+instance
+Type, IMDS setting and instance profile
+aws ec2 describe-instances with a query
+endpoints
+Status and content type of the EC2 address, the Lambda address and the direct S3 address
+curl with the write-out option
+lambda-logs
+The last few log lines
+aws logs tail
+log-retention
+The retention in days
+aws logs describe-log-groups
+If a command fails, the script notes that in its section and carries on. Commit the evidence.txt that your own run produced.
+8. README and written answers
+Your README.md has the following.
+A diagram or sketch of the whole thing, in any form, and two sentences saying how a request reaches the CV on each path.
+The access denied output from section 4.
+The last 10 lines of /var/log/cv-sync.log.
+Answers to these five questions, of at most five sentences each:
+1.  Why do the instance and the function use roles instead of access keys? What could go wrong if the keys were in the user data?
+2.  Someone pastes the S3 address of index.html into a browser. What do they see, and which setting causes that?
+3.  Explain in your own words the permission on the function URL that lets anyone call it. Why is that acceptable for the function but not for the bucket?
+4.  Compare the two paths. What do you pay for when nobody visits the site? What happens if the traffic grows a hundred times?
+5.  You delete the EC2 instance. What do you lose and what do you still have?
+9. How we mark it
+We run these checks from outside, from a repository clone and from your evidence file. Keep both addresses working until we tell you that marking is finished.
+Check
+What we do
+What we expect
+C1
+Open the EC2 address in a browser
+The CV loads, with name, roll number, email and the three sections. The footer says Hosted on: EC2 and an instance ID that is the one of your running instance
+C2
+Request /style.css and /cv.pdf on the EC2 address
+Status 200, content types text/css and application/pdf. The PDF opens
+C3
+Open the Lambda address
+The CV loads over HTTPS. The footer says Hosted on: Lambda and the function name
+C4
+Request /style.css and /cv.pdf on the Lambda address
+Status 200 and the right content types. The PDF opens, so the binary is handled
+C5
+Request /anything on the Lambda address
+Status 404 and a short page
+C6
+Open the S3 address of site/index.html directly
+Access denied
+C7
+Read the evidence for the bucket
+The four settings are on, versioning is enabled, and there are exactly the three keys under site/
+C8
+Read the EC2 role policy
+Only GetObject on site/ and ListBucket with the prefix condition. No wildcards
+C9
+Read the Lambda role policies
+Basic logging, plus GetObject on site/ only. No wildcards, no ListBucket
+C10
+Read the security group and the instance details
+Port 80 open to all, port 22 only from a /32 or closed, nothing else. IMDSv2 required
+C11
+Scan the repository and read the user data and the code
+No access key, no password
+C12
+Read sync-cv.sh and the log lines in the README
+It runs on a schedule of 5 minutes or less and the log shows at least 3 runs in a row
+C13
+Read the Lambda log lines and the retention
+One JSON line per request with fn, path, status and ms. Retention of 7 days
+C14
+Run collect-evidence.sh with the three arguments, then with two
+All 11 sections are produced. With two arguments it prints usage and exits with 1
+C15
+Look at the account and the tags
+One instance of an eligible type, no Elastic IP, no NAT gateway, no load balancer. Tags present. A budget exists
+10. Marking
+Part
+Marks
+Based on
+The bucket and the files
+10
+C6, C7
+IAM roles and policies
+20
+C8, C9, C11
+The EC2 path
+20
+C1, C2, C10, C12
+The Lambda path
+20
+C3, C4, C5, C13
+Evidence script and README
+15
+C14, the README diagram and outputs
+Cost and hygiene
+5
+C15
+Written answers
+10
+The five questions in section 8
+Total
+100
+Within a part, marks go with the share of its checks that pass. If an address does not open when we check it, every check that depends on it fails.
+11. Rules
+Money. Stay inside the Free Tier and your credits. Set a budget before you create anything. One instance only. Look at the Billing page before you submit.
+Keys. Never commit or paste an access key or a password. The repository is public, so anything in it can be read by everyone. If a key gets in, deactivate it at once and tell us.
+Clean-up. After we tell you that marking is finished, delete the instance, the function and its log group, the two roles, the bucket with all its versions, and the security group. Check every Region you have used.
+Your own work. You may use the course material and the official AWS documentation. Say in the README where you adapted anything. [Rule on AI tools and generated code: instructor to add.] You must be able to explain everything you submit. Copying another student's repository or policies is handled under the university's academic integrity policy.
+Late work. [Policy to be added.]
+12. What to submit
+Send these by [portal or email]:
+the link to your public GitHub repository,
+the address of your EC2 site,
+the address of your Lambda site,
+your roll number.
+If we cannot open the repository without logging in, it counts as not submitted. The repository has this layout.
+README.md
+collect-evidence.sh
+evidence.txt
+site/         index.html, style.css, cv.pdf
+ec2/          user-data.sh, sync-cv.sh
+lambda/       the function code
+iam/          the trust and permission JSON of both roles

@@ -1,0 +1,244 @@
+== caller ==
+{
+    "UserId": "AIDAQUH267YROBKQAYCWE",
+    "Account": "043475992098",
+    "Arn": "arn:aws:iam::043475992098:user/l233055"
+}
+
+== public-access ==
+{
+    "PublicAccessBlockConfiguration": {
+        "BlockPublicAcls": true,
+        "IgnorePublicAcls": true,
+        "BlockPublicPolicy": true,
+        "RestrictPublicBuckets": true
+    }
+}
+
+== versioning ==
+{
+    "Status": "Enabled"
+}
+
+== objects ==
+2026-10-24 23:27:38     328389 site/cv.pdf
+2026-10-24 23:27:36       3207 site/index.html
+2026-10-24 23:27:37       2697 site/style.css
+
+== ec2-policy ==
+{
+    "RoleName": "cv-ec2-role-23l-3055",
+    "PolicyName": "cv-ec2-permissions",
+    "PolicyDocument": {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Sid": "AllowGetObjectOnSitePrefix",
+                "Effect": "Allow",
+                "Action": "s3:GetObject",
+                "Resource": "arn:aws:s3:::cv-23l-3055/site/*"
+            },
+            {
+                "Sid": "AllowListBucketWithSitePrefix",
+                "Effect": "Allow",
+                "Action": "s3:ListBucket",
+                "Resource": "arn:aws:s3:::cv-23l-3055",
+                "Condition": {
+                    "StringLike": {
+                        "s3:prefix": [
+                            "site/",
+                            "site/*"
+                        ]
+                    }
+                }
+            }
+        ]
+    }
+}
+
+== lambda-policy ==
+{
+    "AttachedPolicies": [
+        {
+            "PolicyName": "AWSLambdaBasicExecutionRole",
+            "PolicyArn": "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+        }
+    ]
+}
+{
+    "RoleName": "cv-lambda-role-23l-3055",
+    "PolicyName": "cv-lambda-permissions",
+    "PolicyDocument": {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Sid": "AllowGetObjectOnSitePrefix",
+                "Effect": "Allow",
+                "Action": "s3:GetObject",
+                "Resource": "arn:aws:s3:::cv-23l-3055/site/*"
+            }
+        ]
+    }
+}
+
+== security-group ==
+[
+    [
+        {
+            "IpProtocol": "tcp",
+            "FromPort": 80,
+            "ToPort": 80,
+            "UserIdGroupPairs": [],
+            "IpRanges": [
+                {
+                    "Description": "Allow HTTP from anywhere",
+                    "CidrIp": "0.0.0.0/0"
+                }
+            ],
+            "Ipv6Ranges": [],
+            "PrefixListIds": []
+        }
+    ]
+]
+
+== instance ==
+[
+    [
+        {
+            "InstanceType": "t3.micro",
+            "InstanceId": "i-0c80b2c453d6113d0",
+            "IamInstanceProfile": "arn:aws:iam::043475992098:instance-profile/cv-ec2-role-23l-3055",
+            "MetadataOptions": {
+                "State": "applied",
+                "HttpTokens": "required",
+                "HttpPutResponseHopLimit": 2,
+                "HttpEndpoint": "enabled",
+                "HttpProtocolIpv6": "disabled",
+                "InstanceMetadataTags": "disabled"
+            }
+        }
+    ]
+]
+
+== endpoints ==
+EC2: status=200 content-type=text/html; charset=UTF-8
+curl: (23) client returned ERROR on write of 1161 bytes
+curl EC2 failed
+Lambda: status=200 content-type=text/html; charset=utf-8
+curl: (23) client returned ERROR on write of 3217 bytes
+curl Lambda failed
+Direct S3: status=403 content-type=application/xml
+curl: (23) client returned ERROR on write of 263 bytes
+curl S3 failed
+
+== lambda-logs ==
+usage: Note: AWS CLI version 2, the latest major version of the AWS CLI, is now stable and recommended for general use. For more information, see the AWS CLI version 2 installation instructions at: https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html
+
+usage: aws [options] <command> <subcommand> [<subcommand> ...] [parameters]
+To see help text, you can run:
+
+  aws help
+  aws <command> help
+  aws <command> <subcommand> help
+__main__.py: error: argument operation: Invalid choice, valid choices are:
+
+associate-kms-key                        | associate-source-to-s3-table-integration
+cancel-export-task                       | cancel-import-task                      
+create-delivery                          | create-export-task                      
+create-import-task                       | create-log-anomaly-detector             
+create-log-group                         | create-log-stream                       
+create-lookup-table                      | create-scheduled-query                  
+delete-account-policy                    | delete-data-protection-policy           
+delete-delivery                          | delete-delivery-destination             
+delete-delivery-destination-policy       | delete-delivery-source                  
+delete-destination                       | delete-index-policy                     
+delete-integration                       | delete-log-anomaly-detector             
+delete-log-group                         | delete-log-stream                       
+delete-lookup-table                      | delete-metric-filter                    
+delete-query-definition                  | delete-resource-policy                  
+delete-retention-policy                  | delete-scheduled-query                  
+delete-subscription-filter               | delete-syslog-configuration             
+delete-transformer                       | describe-account-policies               
+describe-configuration-templates         | describe-deliveries                     
+describe-delivery-destinations           | describe-delivery-sources               
+describe-destinations                    | describe-export-tasks                   
+describe-field-indexes                   | describe-import-task-batches            
+describe-import-tasks                    | describe-index-policies                 
+describe-log-groups                      | describe-log-streams                    
+describe-lookup-tables                   | describe-metric-filters                 
+describe-queries                         | describe-query-definitions              
+describe-resource-policies               | describe-subscription-filters           
+disassociate-kms-key                     | disassociate-source-from-s3-table-integration
+filter-log-events                        | get-data-protection-policy              
+get-delivery                             | get-delivery-destination                
+get-delivery-destination-policy          | get-delivery-source                     
+get-integration                          | get-log-anomaly-detector                
+get-log-events                           | get-log-fields                          
+get-log-group-fields                     | get-log-record                          
+get-lookup-table                         | get-query-results                       
+get-scheduled-query                      | get-scheduled-query-history             
+get-storage-tier-policy                  | get-transformer                         
+list-aggregate-log-group-summaries       | list-anomalies                          
+list-integrations                        | list-log-anomaly-detectors              
+list-log-groups                          | list-log-groups-for-query               
+list-scheduled-queries                   | list-sources-for-s3-table-integration   
+list-syslog-configurations               | list-tags-for-resource                  
+list-tags-log-group                      | put-account-policy                      
+put-bearer-token-authentication          | put-data-protection-policy              
+put-delivery-destination                 | put-delivery-destination-policy         
+put-delivery-source                      | put-destination                         
+put-destination-policy                   | put-index-policy                        
+put-integration                          | put-log-events                          
+put-log-group-deletion-protection        | put-metric-filter                       
+put-query-definition                     | put-resource-policy                     
+put-retention-policy                     | put-storage-tier-policy                 
+put-subscription-filter                  | put-syslog-configuration                
+put-transformer                          | start-live-tail                         
+start-query                              | stop-query                              
+tag-log-group                            | tag-resource                            
+test-metric-filter                       | test-transformer                        
+untag-log-group                          | untag-resource                          
+update-anomaly                           | update-delivery-configuration           
+update-log-anomaly-detector              | update-lookup-table                     
+update-scheduled-query                   | help                                    
+INIT_START Runtime Version: python:3.12.mainlinev2.v43	Runtime Version ARN: arn:aws:lambda:ap-southeast-2::runtime:36aeb19f3326e129d9f096dea0a3c6a9ca8dce2610e62d2b2060747602d863ae
+	START RequestId: b761e38c-a45a-4cd0-a18f-294ed3a68fa7 Version: $LATEST
+	{"fn": "cv-func-23l-3055", "path": "/", "status": 200, "ms": 308.2}
+	END RequestId: b761e38c-a45a-4cd0-a18f-294ed3a68fa7
+	REPORT RequestId: b761e38c-a45a-4cd0-a18f-294ed3a68fa7	Duration: 339.61 ms	Billed Duration: 817 ms	Memory Size: 128 MB	Max Memory Used: 95 MB	Init Duration: 476.75 ms	
+	INIT_START Runtime Version: python:3.12.mainlinev2.v43	Runtime Version ARN: arn:aws:lambda:ap-southeast-2::runtime:36aeb19f3326e129d9f096dea0a3c6a9ca8dce2610e62d2b2060747602d863ae
+	START RequestId: 249e28d3-7be0-4de1-ac28-2445db3ce1d2 Version: $LATEST
+	{"fn": "cv-func-23l-3055", "path": "/", "status": 200, "ms": 271.1}
+	END RequestId: 249e28d3-7be0-4de1-ac28-2445db3ce1d2
+	REPORT RequestId: 249e28d3-7be0-4de1-ac28-2445db3ce1d2	Duration: 310.02 ms	Billed Duration: 787 ms	Memory Size: 128 MB	Max Memory Used: 96 MB	Init Duration: 476.12 ms	
+	START RequestId: e9c2b35f-7da2-4474-af3c-db38cdfd5020 Version: $LATEST
+	{"fn": "cv-func-23l-3055", "path": "/style.css", "status": 200, "ms": 228.23}
+	END RequestId: e9c2b35f-7da2-4474-af3c-db38cdfd5020
+	REPORT RequestId: e9c2b35f-7da2-4474-af3c-db38cdfd5020	Duration: 247.79 ms	Billed Duration: 248 ms	Memory Size: 128 MB	Max Memory Used: 96 MB	
+	START RequestId: 5ed467ad-0f8f-4b6c-a526-871b4b808b46 Version: $LATEST
+	{"fn": "cv-func-23l-3055", "path": "/cv.pdf", "status": 200, "ms": 309.86}
+	END RequestId: 5ed467ad-0f8f-4b6c-a526-871b4b808b46
+	REPORT RequestId: 5ed467ad-0f8f-4b6c-a526-871b4b808b46	Duration: 370.95 ms	Billed Duration: 371 ms	Memory Size: 128 MB	Max Memory Used: 97 MB	
+	START RequestId: b3528d47-b9a2-423d-9665-608558c7d199 Version: $LATEST
+	{"fn": "cv-func-23l-3055", "path": "/nonexistent", "status": 404, "ms": 0.01}
+	END RequestId: b3528d47-b9a2-423d-9665-608558c7d199
+	REPORT RequestId: b3528d47-b9a2-423d-9665-608558c7d199	Duration: 1.44 ms	Billed Duration: 2 ms	Memory Size: 128 MB	Max Memory Used: 97 MB	
+	INIT_START Runtime Version: python:3.12.mainlinev2.v43	Runtime Version ARN: arn:aws:lambda:ap-southeast-2::runtime:36aeb19f3326e129d9f096dea0a3c6a9ca8dce2610e62d2b2060747602d863ae
+	START RequestId: e158208f-d98e-4b51-b1fe-fbb0c45bd1c3 Version: $LATEST
+	{"fn": "cv-func-23l-3055", "path": "/", "status": 200, "ms": 297.81}
+	END RequestId: e158208f-d98e-4b51-b1fe-fbb0c45bd1c3
+	REPORT RequestId: e158208f-d98e-4b51-b1fe-fbb0c45bd1c3	Duration: 309.96 ms	Billed Duration: 814 ms	Memory Size: 128 MB	Max Memory Used: 96 MB	Init Duration: 503.91 ms	
+	START RequestId: f9908c07-ff9b-49be-89f9-8e3e7fd227c1 Version: $LATEST
+	{"fn": "cv-func-23l-3055", "path": "/", "status": 200, "ms": 224.68}
+	END RequestId: f9908c07-ff9b-49be-89f9-8e3e7fd227c1
+	REPORT RequestId: f9908c07-ff9b-49be-89f9-8e3e7fd227c1	Duration: 246.06 ms	Billed Duration: 247 ms	Memory Size: 128 MB	Max Memory Used: 96 MB	
+
+
+== log-retention ==
+[
+    {
+        "logGroupName": "/aws/lambda/cv-func-23l-3055",
+        "retentionInDays": 7
+    }
+]
+
